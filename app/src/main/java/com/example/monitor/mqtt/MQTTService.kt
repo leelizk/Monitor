@@ -1,6 +1,5 @@
 package com.example.monitor.mqtt
 
-import android.annotation.TargetApi
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -32,12 +31,18 @@ class MQTTService : Service() {
                 Log.e(TAG, "开启 mqtt")
                 host = "tcp://47.104.169.153:1883"
                 userName = "zhuzhu"
-
                 //默认关注的主题,用于统计或者版本发布，广告推送
                 myTopic!![0] = "wifi_listener"
 
                 clientId = genClientId()
                 init()
+                createNotificationChannel();
+    }
+
+    private fun createNotificationChannel(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+        }
     }
 
     //发布消息--> 客户端不需要发布消息,如果需要发布，走http通道
@@ -148,7 +153,6 @@ class MQTTService : Service() {
 
     // MQTT监听并且接受消息
     private val mqttCallback: MqttCallback = object : MqttCallback {
-        @Throws(Exception::class)
         override fun messageArrived(topic: String, message: MqttMessage) {
 
             //回调
@@ -216,7 +220,7 @@ class MQTTService : Service() {
             val channel = NotificationChannel("xxx", "xxx", NotificationManager.IMPORTANCE_LOW)
             manager.createNotificationChannel(channel)
         }
-       /* val notification: Notification = Builder(this, "xxx")
+        /*val notification: Notification = Builder(this, "xxx")
                 .setAutoCancel(true)
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .setContentText(message)

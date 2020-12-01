@@ -15,7 +15,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Monitor">
         <service
-            android:name=".MqttListenService"
+            android:name=".mqtt.MQTTService"
             android:enabled="true"
             android:exported="true"></service>
 
