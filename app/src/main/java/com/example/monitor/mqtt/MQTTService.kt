@@ -24,13 +24,21 @@ class MQTTService : Service() {
     private var clientId = "" //客户端标识
     private var IGetMessageCallBack: IGetMessageCallBack? = null
 
+    /**
+     *
+    mqtt.serverip=tcp://47.107.62.127
+    mqtt.port=61613
+
+    mqtt.username=admin
+    mqtt.password=~!yw_654321
+     */
     override fun onCreate() {
             super.onCreate()
             Log.e(TAG, "onCreate")
 
                 Log.e(TAG, "开启 mqtt")
-                host = "tcp://47.104.169.153:1883"
-                userName = "zhuzhu"
+                host = ""
+                userName = "admin"
                 //默认关注的主题,用于统计或者版本发布，广告推送
                 myTopic!![0] = "wifi_listener"
 
@@ -121,7 +129,7 @@ class MQTTService : Service() {
     private fun doClientConnection() {
         if (!client!!.isConnected && isConnectIsNormal) {
             try {
-                client!!.connect(conOpt, null, iMqttActionListener)
+                client!!.connect(conOpt, null, iMqttActionListener) as IMqttToken
             } catch (e: MqttException) {
                 e.printStackTrace()
             }
