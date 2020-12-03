@@ -1,9 +1,13 @@
 package com.example.monitor.utils
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
+import android.net.wifi.WifiManager.LocalOnlyHotspotCallback
+import android.net.wifi.WifiManager.LocalOnlyHotspotReservation
+import android.os.Handler
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.*
@@ -12,21 +16,19 @@ import kotlin.concurrent.timerTask
 
 object WifiManagerUtils {
 
-    private lateinit var wifimanager:WifiManager;
+    private  var wifimanager:WifiManager? = null;
 
     private fun initWifiManager(application: Application){
-        if(wifimanager == null){
-            wifimanager  = application.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        }
+        wifimanager = application.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     }
 
-    fun startWifi(application: Application,ssid:String="leelizk",passwd:String="joeleejoke"){
+    fun startWifi(application: Application, ssid: String = "leelizk", passwd: String = "joeleejoke"){
             initWifiManager(application)
             //wifi和热点不能同时打开，所以打开热点的时候需要关闭wifi
-            if(this!!.isWifiApEnabled()!!){
-                wifimanager.isWifiEnabled = false;
+            if(wifimanager!!.isWifiEnabled()){
+                wifimanager!!.isWifiEnabled = true;
             }
-            if(isWifiApEnabled()!!){
+            if(!isWifiApEnabled()!!){
                 stratWifiAp(ssid, passwd);
             }
         }
@@ -35,8 +37,8 @@ object WifiManagerUtils {
             initWifiManager(application)
 
             val timer = Timer()
-            timer.schedule(timerTask { closeWifiAp() },500);
-            timer.schedule(timerTask { startWifi(application) },1000);
+            timer.schedule(timerTask { closeWifiAp() }, 500);
+            timer.schedule(timerTask { startWifi(application) }, 1000);
         }
 
         fun stopWifi(application: Application){
@@ -54,9 +56,9 @@ object WifiManagerUtils {
      */
      fun isWifiApEnabled(): Boolean? {
         try {
-            val method: Method = wifimanager::class.java.getMethod("isWifiApEnabled")
+            val method: Method = wifimanager!!::class.java.getMethod("isWifiApEnabled")
             method.setAccessible(true)
-            var result:Boolean?=  method.invoke(wifimanager) as Boolean;
+            var result =  method.invoke(wifimanager) as Boolean;
             return result;
         } catch (e: NoSuchMethodException) {
             e.printStackTrace()
@@ -77,10 +79,10 @@ object WifiManagerUtils {
         var method1: Method? = null
         try {
             //通过反射机制打开热点
-            method1 = wifimanager::class.java.getMethod(
-                "setWifiApEnabled",
-                WifiConfiguration::class.java,
-                Boolean::class.javaPrimitiveType
+            method1 = wifimanager!!::class.java.getMethod(
+                    "setWifiApEnabled",
+                    WifiConfiguration::class.java,
+                    Boolean::class.javaPrimitiveType
             )
             val netConfig = WifiConfiguration()
             netConfig.SSID = mSSID
@@ -116,13 +118,13 @@ object WifiManagerUtils {
         if (isWifiApEnabled()!!) {
             try {
                 val method: Method =
-                    wifimanager::class.java.getMethod("getWifiApConfiguration")
+                    wifimanager!!::class.java.getMethod("getWifiApConfiguration")
                 method.isAccessible = true
                 val config = method.invoke(wifimanager) as WifiConfiguration
-                val method2: Method = wifimanager::class.java.getMethod(
-                    "setWifiApEnabled",
-                    WifiConfiguration::class.java,
-                    Boolean::class.javaPrimitiveType
+                val method2: Method = wifimanager!!::class.java.getMethod(
+                        "setWifiApEnabled",
+                        WifiConfiguration::class.java,
+                        Boolean::class.javaPrimitiveType
                 )
                 method2.invoke(wifimanager, config, false)
             } catch (e: NoSuchMethodException) {
@@ -134,4 +136,28 @@ object WifiManagerUtils {
             }
         }
     }
+
+
+    @SuppressLint("MissingPermission")
+    fun turnOnWifi(){
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            wifimanager?.startLocalOnlyHotspot(object : LocalOnlyHotspotCallback() {
+                override fun onStarted(reservation: LocalOnlyHotspotReservation) {
+                    var mReservation = reservation
+                    var sid = reservation.wifiConfiguration!!.SSID
+                    var pwd = reservation.wifiConfiguration!!.preSharedKey
+                    //callbak.onConnected("", sid, pwd)
+                }
+
+                override fun onStopped() {
+                    //  mReservation = null
+                }
+
+                override fun onFailed(reason: Int) {
+                    //callbak.onConnected("wifi ap is failed to open", null, null)
+                }
+            }, Handler())
+        }
+    }
+
 }

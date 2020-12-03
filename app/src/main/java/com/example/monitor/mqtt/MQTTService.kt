@@ -1,6 +1,5 @@
 package com.example.monitor.mqtt
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -22,7 +21,7 @@ class MQTTService : Service() {
     private var host = ""
     private var userName = ""
     private var clientId = "" //客户端标识
-    private var IGetMessageCallBack: IGetMessageCallBack? = null
+    private var callback: IGetMessageCallBack? = null
 
     /**
      *
@@ -32,7 +31,7 @@ class MQTTService : Service() {
             Log.e(TAG, "onCreate")
 
                 Log.e(TAG, "开启 mqtt")
-                host = ""
+                host = "tcp://47.107.62.127:61613"
                 userName = "admin"
                 //默认关注的主题,用于统计或者版本发布，广告推送
                 myTopic!![0] = "wifi_listener"
@@ -160,8 +159,8 @@ class MQTTService : Service() {
 
             //回调
             val str1 = String(message.payload)
-            if (IGetMessageCallBack != null) {
-                IGetMessageCallBack!!.setMessage(str1)
+            if (callback != null) {
+                callback!!.setMessage(str1)
             }
             val str2 = topic + ";qos:" + message.qos + ";retained:" + message.isRetained
             Log.i(TAG, "messageArrived:$str1")
@@ -204,8 +203,8 @@ class MQTTService : Service() {
         return CustomBinder()
     }
 
-    fun setIGetMessageCallBack(IGetMessageCallBack: IGetMessageCallBack?) {
-        this.IGetMessageCallBack = IGetMessageCallBack
+    fun setCallback(callback: IGetMessageCallBack?) {
+        this.callback = callback
     }
 
     inner class CustomBinder : Binder() {
@@ -240,7 +239,7 @@ class MQTTService : Service() {
 
         //# 密码
 
-        private const val passWord = ""
+        private const val passWord = "~!yw_654321"
 
         //0 系统主题
         //1 支持主题

@@ -9,7 +9,7 @@ class MyServiceConnection : ServiceConnection {
     private var IGetMessageCallBack: IGetMessageCallBack? = null
     override fun onServiceConnected(componentName: ComponentName, iBinder: IBinder) {
         mqttService = (iBinder as MQTTService.CustomBinder).service
-        mqttService!!.setIGetMessageCallBack(IGetMessageCallBack)
+        mqttService!!.setCallback(IGetMessageCallBack)
     }
 
     override fun onServiceDisconnected(componentName: ComponentName) {}

@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
             isBind = true
             val myBinder = p1 as MQTTService.CustomBinder
             service = myBinder.service
-            service!!.setIGetMessageCallBack(object : IGetMessageCallBack {
+            service!!.setCallback(object : IGetMessageCallBack {
                 override fun setMessage(message: String?) {
                     try {
                         var cmd: MqttCmd = Gson().fromJson(message, MqttCmd::class.java)
