@@ -239,7 +239,7 @@ class MQTTService : Service() {
 
         //# 密码
 
-        private const val passWord = "~!yw_654321"
+        private const val passWord = ""
 
         //0 系统主题
         //1 支持主题
