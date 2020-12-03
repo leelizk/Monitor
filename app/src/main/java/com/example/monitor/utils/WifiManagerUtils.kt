@@ -6,38 +6,45 @@ import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
+import java.util.*
+import kotlin.concurrent.timerTask
 
 
-class WifiManagerUtils private constructor //单例
-    (application: Application) {
+object WifiManagerUtils {
 
-    private val wifimanager:WifiManager = application.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+    private lateinit var wifimanager:WifiManager;
 
-
-
-    fun getInstance():WifiManager{
-            return wifimanager;
-    }
-
-
-
-    fun startWifi(ssid:String,passwd:String){
-        //wifi和热点不能同时打开，所以打开热点的时候需要关闭wifi
-        if(wifimanager.isWifiEnabled){
-            wifimanager.isWifiEnabled = false;
-        }
-        if(this.isWifiApEnabled()!!){
-            stratWifiAp(ssid, passwd);
+    private fun initWifiManager(application: Application){
+        if(wifimanager == null){
+            wifimanager  = application.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         }
     }
 
-    fun restartWifi(){
+    fun startWifi(application: Application,ssid:String="leelizk",passwd:String="joeleejoke"){
+            initWifiManager(application)
+            //wifi和热点不能同时打开，所以打开热点的时候需要关闭wifi
+            if(this!!.isWifiApEnabled()!!){
+                wifimanager.isWifiEnabled = false;
+            }
+            if(isWifiApEnabled()!!){
+                stratWifiAp(ssid, passwd);
+            }
+        }
 
-    }
+        fun restartWifi(application: Application){
+            initWifiManager(application)
 
-    fun stopWifi(){
+            val timer = Timer()
+            timer.schedule(timerTask { closeWifiAp() },500);
+            timer.schedule(timerTask { startWifi(application) },1000);
+        }
 
-    }
+        fun stopWifi(application: Application){
+            initWifiManager(application)
+            closeWifiAp()
+        }
+
+
 
 
     /**
@@ -45,7 +52,7 @@ class WifiManagerUtils private constructor //单例
      *
      * @return
      */
-    fun isWifiApEnabled(): Boolean? {
+     fun isWifiApEnabled(): Boolean? {
         try {
             val method: Method = wifimanager::class.java.getMethod("isWifiApEnabled")
             method.setAccessible(true)
@@ -66,7 +73,7 @@ class WifiManagerUtils private constructor //单例
      * @param mSSID
      * @param mPasswd
      */
-    private fun stratWifiAp(mSSID: String, mPasswd: String) {
+     fun stratWifiAp(mSSID: String, mPasswd: String) {
         var method1: Method? = null
         try {
             //通过反射机制打开热点
@@ -98,6 +105,33 @@ class WifiManagerUtils private constructor //单例
             e.printStackTrace()
         } catch (e: NoSuchMethodException) {
             e.printStackTrace()
+        }
+    }
+
+
+    /**
+     * 关闭热点
+     */
+    fun closeWifiAp() {
+        if (isWifiApEnabled()!!) {
+            try {
+                val method: Method =
+                    wifimanager::class.java.getMethod("getWifiApConfiguration")
+                method.isAccessible = true
+                val config = method.invoke(wifimanager) as WifiConfiguration
+                val method2: Method = wifimanager::class.java.getMethod(
+                    "setWifiApEnabled",
+                    WifiConfiguration::class.java,
+                    Boolean::class.javaPrimitiveType
+                )
+                method2.invoke(wifimanager, config, false)
+            } catch (e: NoSuchMethodException) {
+                e.printStackTrace()
+            } catch (e: InvocationTargetException) {
+                e.printStackTrace()
+            } catch (e: IllegalAccessException) {
+                e.printStackTrace()
+            }
         }
     }
 }

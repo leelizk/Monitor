@@ -26,11 +26,6 @@ class MQTTService : Service() {
 
     /**
      *
-    mqtt.serverip=tcp://47.107.62.127
-    mqtt.port=61613
-
-    mqtt.username=admin
-    mqtt.password=~!yw_654321
      */
     override fun onCreate() {
             super.onCreate()

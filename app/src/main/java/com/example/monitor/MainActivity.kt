@@ -11,13 +11,21 @@ import android.util.Log
 import com.example.monitor.bean.MqttCmd
 import com.example.monitor.mqtt.IGetMessageCallBack
 import com.example.monitor.mqtt.MQTTService
-import com.example.monitor.utils.CmdEnum.START_WIFI
-import com.example.monitor.utils.CmdEnum.STOP_WIFI
+import com.example.monitor.utils.WifiManagerUtils
 import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
     private val TAG:String?=MainActivity::class.java.simpleName;
+
+    companion object{
+        const val START_WIFI:Int = 0
+        const val RESTART_WIFI:Int = 1
+        const val STOP_WIFI:Int = 2
+    }
 
     private var myIntent: Intent?=null;
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,9 +51,13 @@ class MainActivity : AppCompatActivity() {
                 override fun setMessage(message: String?) {
                     try {
                         var cmd: MqttCmd = Gson().fromJson(message, MqttCmd::class.java)
-                        when(cmd.action){
-                           //is STOP_WIFI ->{}
-                           // is START_WIFI ->{}
+                        var action:Int = cmd.action as Int;
+                        if(action == STOP_WIFI){
+                            callStopWifi()
+                        }else if(action == START_WIFI){
+                            callStartWifi()
+                        }else if(action == RESTART_WIFI){
+                            callRestartWifi();
                         }
                     }catch (e:Exception){
                         e.message?.let { Log.i(TAG, it) }
@@ -53,14 +65,30 @@ class MainActivity : AppCompatActivity() {
 
                 }
             })
-            Log.i("xiao", "ActivityA - onServiceConnected")
-            //val num = service!!.getRandomNumber()
-            //Log.i("xiao", "ActivityA - getRandomNumber = $num");
+            Log.i(TAG, "onServiceConnected")
         }
 
         override fun onServiceDisconnected(p0: ComponentName?) {
             isBind = false
-            Log.i("xiao", "ActivityA - onServiceDisconnected")
+            Log.i(TAG, "onServiceDisconnected")
+        }
+    }
+
+    fun callStartWifi(){
+        GlobalScope.launch(Dispatchers.IO) {
+            WifiManagerUtils.startWifi(application)
+        }
+    }
+
+    fun callStopWifi(){
+        GlobalScope.launch(Dispatchers.IO) {
+            WifiManagerUtils.stopWifi(application)
+        }
+    }
+
+    fun callRestartWifi(){
+        GlobalScope.launch(Dispatchers.IO) {
+            WifiManagerUtils.restartWifi(application)
         }
     }
 
