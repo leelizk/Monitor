@@ -1,13 +1,9 @@
 package com.example.monitor.utils
 
-import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
-import android.net.wifi.WifiManager.LocalOnlyHotspotCallback
-import android.net.wifi.WifiManager.LocalOnlyHotspotReservation
-import android.os.Handler
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.*
@@ -134,29 +130,6 @@ object WifiManagerUtils {
             } catch (e: IllegalAccessException) {
                 e.printStackTrace()
             }
-        }
-    }
-
-
-    @SuppressLint("MissingPermission")
-    fun turnOnWifi(){
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            wifimanager?.startLocalOnlyHotspot(object : LocalOnlyHotspotCallback() {
-                override fun onStarted(reservation: LocalOnlyHotspotReservation) {
-                    var mReservation = reservation
-                    var sid = reservation.wifiConfiguration!!.SSID
-                    var pwd = reservation.wifiConfiguration!!.preSharedKey
-                    //callbak.onConnected("", sid, pwd)
-                }
-
-                override fun onStopped() {
-                    //  mReservation = null
-                }
-
-                override fun onFailed(reason: Int) {
-                    //callbak.onConnected("wifi ap is failed to open", null, null)
-                }
-            }, Handler())
         }
     }
 
