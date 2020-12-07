@@ -1,9 +1,17 @@
 package com.example.monitor.utils
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
+import android.content.Intent
+import android.net.ConnectivityManager
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
+import android.net.wifi.WifiManager.LocalOnlyHotspotCallback
+import android.os.Build
+import android.text.TextUtils
+import android.util.Log
+import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.*
@@ -11,6 +19,18 @@ import kotlin.concurrent.timerTask
 
 
 object WifiManagerUtils {
+
+    private  val TAG: String = WifiManagerUtils::class.java.simpleName
+
+
+    private const val config_ap = "config_ap"
+
+    /**
+     * ssid
+     */
+    private const val DEFAULT_SSID = "lzk"
+
+    private val DEFAULT_PWD: String = "12345678";
 
     private  var wifimanager:WifiManager? = null;
 
@@ -131,6 +151,221 @@ object WifiManagerUtils {
                 e.printStackTrace()
             }
         }
+    }
+
+
+    /**
+     * 开启/关闭热点
+     *
+     * @param context  上下文
+     * @param ssid     ssid
+     * @param password 密码
+     * @param enabled  true打开，false关闭
+     * @return
+     */
+    private fun setWifiApEnabled(context: Context, ssid: String, password: String, enabled: Boolean): Boolean {
+        //8.0这种方式就只能是打开系统默认那个ssid和密码的热点了，不支持设置ssid和密码
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return setWifiApEnabledForAndroidO(context, enabled)
+        }
+        //适合7.1-8.1之间的安卓版本,不过这种方式打开的热点ssid是用UUID随机生成的，
+        //类似:AndroidShare_7640,其中AndroidShare_是固定的，而后面的数字则是随机的,与系统设置里面的ssid和密码无关
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N_MR1 && Build.VERSION.SDK_INT <= 27) {
+            if (enabled) {
+                val startApService = Intent(context, WifiApService::class.java)
+                startApService.action = "com.ap.hotspot"
+                context.startService(startApService)
+            } else {
+                val startApService = Intent(context, WifiApService::class.java)
+                startApService.action = "com.ap.hotspot"
+                context.stopService(startApService)
+            }
+            return true
+        }
+        //处理低版本，只适用于安卓7.0或7.0以下版本且版本>=4.0
+        val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        return try {
+            // 因为6.0及其以下版本，在开启热点之前要先手动关闭wifi。以后版本就不需要了会自动关闭，热点关闭后也会自动打开
+            wifiManager.isWifiEnabled = false
+            closeAp(context)
+            var apConfig: WifiConfiguration? = null
+            if (enabled) {
+                if (TextUtils.isEmpty(ssid) || TextUtils.isEmpty(password)) {
+                    return false
+                }
+                // 热点的配置类
+                apConfig = getApConfig(ssid, password, 2)
+            }
+            val method = wifiManager.javaClass.getMethod("setWifiApEnabled", WifiConfiguration::class.java, java.lang.Boolean.TYPE)
+            method.invoke(wifiManager, apConfig, enabled) as Boolean
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /**
+     * 设置热点
+     *
+     * @param ssid     热点名称
+     * @param password 热点密码
+     * @param type     加密类型
+     * @return
+     */
+    fun getApConfig(ssid: String?, password: String?, type: Int): WifiConfiguration? {
+        val config = WifiConfiguration()
+        config.allowedAuthAlgorithms.clear()
+        config.allowedGroupCiphers.clear()
+        config.allowedKeyManagement.clear()
+        config.allowedPairwiseCiphers.clear()
+        config.allowedProtocols.clear()
+        config.SSID = ssid
+        if (type == 0) {
+            config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE)
+        } else if (type == 1) {
+            config.wepKeys[0] = password
+            config.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.SHARED)
+            config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP)
+            config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP)
+            config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.WEP40)
+            config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.WEP104)
+            config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE)
+            config.wepTxKeyIndex = 0
+        } else if (type == 2) { //   WPA/WPA2 PSK的加密方式都可以通过此方法连上热点  也就是说我们连接热点只用分为有密码和无密码情况
+            config.preSharedKey = password
+            config.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.OPEN)
+            config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP)
+            config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK)
+            config.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP)
+            config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP)
+            config.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP)
+            config.status = WifiConfiguration.Status.ENABLED
+        }
+        return config
+    }
+
+
+    /**
+     * 8.0 开启热点方法
+     * 注意：这个方法开启的热点名称和密码是手机系统里面默认的那个
+     * 权限： android.permission.OVERRIDE_WIFI_CONFIG
+     *
+     * @param context
+     */
+    private fun setWifiApEnabledForAndroidO(context: Context, isEnable: Boolean): Boolean {
+        val connManager = context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        var iConnMgrField: Field? = null
+        return try {
+            iConnMgrField = connManager.javaClass.getDeclaredField("mService")
+            iConnMgrField.setAccessible(true)
+            val iConnMgr: Any = iConnMgrField.get(connManager)
+            val iConnMgrClass = Class.forName(iConnMgr.javaClass.name)
+            if (isEnable) {
+                val startTethering = iConnMgrClass.getMethod("startTethering", Int::class.javaPrimitiveType, ResultReceiver::class.java, Boolean::class.javaPrimitiveType)
+                startTethering.invoke(iConnMgr, 0, null, true)
+            } else {
+                val startTethering = iConnMgrClass.getMethod("stopTethering", Int::class.javaPrimitiveType)
+                startTethering.invoke(iConnMgr, 0)
+            }
+            true
+        } catch (e: java.lang.Exception) {
+            Log.e(TAG, "8.0开启热点异常", e)
+            false
+        }
+    }
+
+    /**
+     * 判断热点是否开启
+     *
+     * @param context
+     * @return
+     */
+    fun isApOn(context: Context): Boolean {
+        val wifimanager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        try {
+            val method = wifimanager.javaClass.getDeclaredMethod("isWifiApEnabled")
+            method.isAccessible = true
+            return method.invoke(wifimanager) as Boolean
+        } catch (e: Throwable) {
+            Log.e(TAG, "判断热点是否开启", e)
+        }
+        return false
+    }
+
+
+    /**
+     * 关闭热点
+     *
+     * @param context
+     */
+    fun closeAp(context: Context) {
+        val wifimanager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        try {
+            val method = wifimanager.javaClass.getMethod("setWifiApEnabled", WifiConfiguration::class.java, Boolean::class.javaPrimitiveType)
+            method.invoke(wifimanager, null, false)
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+        }
+    }
+
+
+    /**
+     * 获取开启热点后的IP地址
+     *
+     * @param context
+     * @return
+     */
+    @SuppressLint("MissingPermission")
+    fun getHotspotLocalIpAddress(context: Context): String? {
+        val wifimanager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            wifimanager.startLocalOnlyHotspot(object : LocalOnlyHotspotCallback() {}, null)
+        }
+        val dhcpInfo = wifimanager.dhcpInfo
+        if (dhcpInfo != null) {
+            val address = dhcpInfo.serverAddress
+            return ((address and 0xFF)
+                    .toString() + "." + (address shr 8 and 0xFF)
+                    + "." + (address shr 16 and 0xFF)
+                    + "." + (address shr 24 and 0xFF))
+        }
+        return null
+    }
+
+
+    /**
+     * 保存ssid信息
+     *
+     * @param context
+     * @param ssid
+     * @param pwd
+     */
+    fun saveApInfo(context: Context, ssid: String?, pwd: String?) {
+        val preferences = context.getSharedPreferences(config_ap, Context.MODE_PRIVATE)
+        val editor = preferences.edit()
+        editor.putString("ssid", ssid)
+        editor.putString("pwd", pwd)
+        editor.commit()
+    }
+
+    /**
+     * 获取ssid
+     *
+     * @param context
+     */
+    fun getSsid(context: Context): String? {
+        val preferences = context.getSharedPreferences(config_ap, Context.MODE_PRIVATE)
+        return preferences.getString("ssid", DEFAULT_SSID)
+    }
+
+    /**
+     * 获取pwd
+     *
+     * @param context
+     */
+    fun getPwd(context: Context): String? {
+        val preferences = context.getSharedPreferences(config_ap, Context.MODE_PRIVATE)
+        return preferences.getString("pwd", DEFAULT_PWD)
     }
 
 }
