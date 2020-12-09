@@ -9,6 +9,7 @@ import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
 import android.net.wifi.WifiManager.LocalOnlyHotspotCallback
 import android.os.Build
+import android.support.v4.os.ResultReceiver
 import android.text.TextUtils
 import android.util.Log
 import java.lang.reflect.Field
@@ -167,20 +168,6 @@ object WifiManagerUtils {
         //8.0这种方式就只能是打开系统默认那个ssid和密码的热点了，不支持设置ssid和密码
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             return setWifiApEnabledForAndroidO(context, enabled)
-        }
-        //适合7.1-8.1之间的安卓版本,不过这种方式打开的热点ssid是用UUID随机生成的，
-        //类似:AndroidShare_7640,其中AndroidShare_是固定的，而后面的数字则是随机的,与系统设置里面的ssid和密码无关
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N_MR1 && Build.VERSION.SDK_INT <= 27) {
-            if (enabled) {
-                val startApService = Intent(context, WifiApService::class.java)
-                startApService.action = "com.ap.hotspot"
-                context.startService(startApService)
-            } else {
-                val startApService = Intent(context, WifiApService::class.java)
-                startApService.action = "com.ap.hotspot"
-                context.stopService(startApService)
-            }
-            return true
         }
         //处理低版本，只适用于安卓7.0或7.0以下版本且版本>=4.0
         val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
