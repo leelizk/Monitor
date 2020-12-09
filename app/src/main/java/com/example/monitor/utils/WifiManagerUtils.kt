@@ -3,15 +3,20 @@ package com.example.monitor.utils
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
-import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.wifi.WifiConfiguration
+import android.net.wifi.WifiEnterpriseConfig
 import android.net.wifi.WifiManager
 import android.net.wifi.WifiManager.LocalOnlyHotspotCallback
+import android.net.wifi.WifiManager.LocalOnlyHotspotReservation
 import android.os.Build
+import android.os.Handler
 import android.support.v4.os.ResultReceiver
 import android.text.TextUtils
 import android.util.Log
+import androidx.annotation.Nullable
+import androidx.annotation.RequiresApi
+import com.vkpapps.apmanager.APManager
 import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
@@ -39,14 +44,18 @@ object WifiManagerUtils {
         wifimanager = application.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     }
 
-    fun startWifi(application: Application, ssid: String = "leelizk", passwd: String = "joeleejoke"){
+    fun startWifi(application: Application, ssid: String = "leelizk", passwd: String = ""){
             initWifiManager(application)
             //wifi和热点不能同时打开，所以打开热点的时候需要关闭wifi
-            if(wifimanager!!.isWifiEnabled()){
+           /* if(wifimanager!!.isWifiEnabled()){
                 wifimanager!!.isWifiEnabled = true;
             }
             if(!isWifiApEnabled()!!){
                 stratWifiAp(ssid, passwd);
+            }*/
+            if(!isApOn(application.applicationContext)){
+                //setWifiApEnabled(application.applicationContext,"leelizk","",true)
+                turnOnByApManager(application,"leelizk","");
             }
         }
 
@@ -355,4 +364,43 @@ object WifiManagerUtils {
         return preferences.getString("pwd", DEFAULT_PWD)
     }
 
+    fun turnOnByApManager(application: Application,ssid:String,password:String){
+        var apManager: APManager = APManager.getApManager(application)
+        if(!apManager.isWifiApEnabled){
+            Log.i(TAG,"WIFI 热点不可用")
+            return
+        }
+        apManager.turnOnHotspot(application.applicationContext,APManager.OnSuccessListener(){ ssid, password ->
+            Log.i(TAG,"开启热点成功===>?")
+        },APManager.OnFailureListener(){ code: Int, exception: java.lang.Exception? ->
+            Log.i(TAG,"开启热点失败===>?")
+        })
+    }
+
+
+    @SuppressLint("MissingPermission")
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    fun turnOnHotspot(application: Application) {
+        initWifiManager(application)
+        wifimanager?.startLocalOnlyHotspot(object : LocalOnlyHotspotCallback() {
+            override fun onStarted(reservation: LocalOnlyHotspotReservation) {
+                super.onStarted(reservation)
+                var hotspotReservation:WifiManager.LocalOnlyHotspotReservation = reservation
+               // var currentConfig:WifiEnterpriseConfig = hotspotReservation.getWifiConfiguration()
+
+            }
+
+            override fun onStopped() {
+                super.onStopped()
+                Log.v("DANG", "Local Hotspot Stopped")
+            }
+
+            override fun onFailed(reason: Int) {
+                super.onFailed(reason)
+                Log.v("DANG", "Local Hotspot failed to start")
+            }
+        }, Handler())
+    }
+
 }
+
