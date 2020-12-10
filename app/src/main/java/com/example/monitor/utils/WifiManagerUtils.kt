@@ -40,6 +40,8 @@ object WifiManagerUtils {
 
     private  var wifimanager:WifiManager? = null;
 
+    private var apManager: APManager? = null;
+
     private fun initWifiManager(application: Application){
         wifimanager = application.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     }
@@ -54,10 +56,17 @@ object WifiManagerUtils {
                 stratWifiAp(ssid, passwd);
             }*/
             if(!isApOn(application.applicationContext)){
+                //开启热点时，必须关闭wifi
+                turnOffWifi(application);
                 //setWifiApEnabled(application.applicationContext,"leelizk","",true)
                 turnOnByApManager(application,"leelizk","");
             }
         }
+
+    fun turnOffWifi(application: Application){
+        initWifiManager(application)
+        wifimanager?.isWifiEnabled = false
+    }
 
         fun restartWifi(application: Application){
             initWifiManager(application)
@@ -365,16 +374,17 @@ object WifiManagerUtils {
     }
 
     fun turnOnByApManager(application: Application,ssid:String,password:String){
-        var apManager: APManager = APManager.getApManager(application)
-        if(!apManager.isWifiApEnabled){
-            Log.i(TAG,"WIFI 热点不可用")
-            return
-        }
-        apManager.turnOnHotspot(application.applicationContext,APManager.OnSuccessListener(){ ssid, password ->
+        apManager = APManager.getApManager(application)
+        apManager?.turnOnHotspot(application.applicationContext,APManager.OnSuccessListener(){ ssid, password ->
             Log.i(TAG,"开启热点成功===>?")
         },APManager.OnFailureListener(){ code: Int, exception: java.lang.Exception? ->
             Log.i(TAG,"开启热点失败===>?")
         })
+    }
+
+    fun turnOffByApManager(application: Application){
+        apManager = APManager.getApManager(application);
+        apManager?.disableWifiAp()
     }
 
 

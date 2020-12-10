@@ -11,6 +11,7 @@ import android.util.Log
 import com.example.monitor.bean.MqttCmd
 import com.example.monitor.mqtt.IGetMessageCallBack
 import com.example.monitor.mqtt.MQTTService
+import com.example.monitor.utils.WifiApManager
 import com.example.monitor.utils.WifiManagerUtils
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
@@ -75,8 +76,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun callStartWifi(){
+         val context:Context = this;
         GlobalScope.launch(Dispatchers.IO) {
-            WifiManagerUtils.startWifi(application)
+            //WifiManagerUtils.startWifi(application)
+            var wifiApManager:WifiApManager = WifiApManager();
+            wifiApManager.WifiApManager(context)
+            wifiApManager.setWifiApState(wifiApManager.getWifiApConfiguration(),true);
         }
     }
 
