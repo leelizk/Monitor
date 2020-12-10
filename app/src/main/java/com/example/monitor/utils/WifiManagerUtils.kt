@@ -5,7 +5,6 @@ import android.app.Application
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.wifi.WifiConfiguration
-import android.net.wifi.WifiEnterpriseConfig
 import android.net.wifi.WifiManager
 import android.net.wifi.WifiManager.LocalOnlyHotspotCallback
 import android.net.wifi.WifiManager.LocalOnlyHotspotReservation
@@ -14,7 +13,6 @@ import android.os.Handler
 import android.support.v4.os.ResultReceiver
 import android.text.TextUtils
 import android.util.Log
-import androidx.annotation.Nullable
 import androidx.annotation.RequiresApi
 import com.vkpapps.apmanager.APManager
 import java.lang.reflect.Field
@@ -46,7 +44,7 @@ object WifiManagerUtils {
         wifimanager = application.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     }
 
-    fun startWifi(application: Application, ssid: String = "leelizk", passwd: String = ""){
+    fun startWifi(application: Application, ssid: String = "leelizk", passwd: String = "joeleejoke"){
             initWifiManager(application)
             //wifi和热点不能同时打开，所以打开热点的时候需要关闭wifi
            /* if(wifimanager!!.isWifiEnabled()){
@@ -59,7 +57,7 @@ object WifiManagerUtils {
                 //开启热点时，必须关闭wifi
                 turnOffWifi(application);
                 //setWifiApEnabled(application.applicationContext,"leelizk","",true)
-                turnOnByApManager(application,"leelizk","");
+                turnOnByApManager(application,ssid,passwd);
             }
         }
 

@@ -18,6 +18,8 @@ class WifiApManager {
     private var wifiApConfigurationMethod: Method? = null
     private var wifiApState: Method? = null
 
+
+    @Deprecated("NoSuchMethodException of setWifiApEnabled")
     @SuppressLint("RestrictedApi")
     @Throws(SecurityException::class, NoSuchMethodException::class)
     fun WifiApManager(context: Context) {

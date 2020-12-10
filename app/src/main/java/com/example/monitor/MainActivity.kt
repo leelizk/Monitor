@@ -78,10 +78,10 @@ class MainActivity : AppCompatActivity() {
     fun callStartWifi(){
          val context:Context = this;
         GlobalScope.launch(Dispatchers.IO) {
-            //WifiManagerUtils.startWifi(application)
-            var wifiApManager:WifiApManager = WifiApManager();
-            wifiApManager.WifiApManager(context)
-            wifiApManager.setWifiApState(wifiApManager.getWifiApConfiguration(),true);
+            WifiManagerUtils.startWifi(application)
+           // var wifiApManager:WifiApManager = WifiApManager();
+           // wifiApManager.WifiApManager(context)
+           // wifiApManager.setWifiApState(wifiApManager.getWifiApConfiguration(),true);
         }
     }
 
