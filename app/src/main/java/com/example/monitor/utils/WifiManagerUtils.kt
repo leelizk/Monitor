@@ -373,6 +373,8 @@ object WifiManagerUtils {
 
     fun turnOnByApManager(application: Application,ssid:String,password:String){
         apManager = APManager.getApManager(application)
+
+        //解决判断 权限问题。把targetSdk 调到23以下
         apManager?.turnOnHotspot(application.applicationContext,APManager.OnSuccessListener(){ ssid, password ->
             Log.i(TAG,"开启热点成功===>?")
         },APManager.OnFailureListener(){ code: Int, exception: java.lang.Exception? ->
